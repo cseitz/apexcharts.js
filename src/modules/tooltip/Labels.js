@@ -260,7 +260,7 @@ export default class Labels {
     }
 
     // if xaxis tooltip is constructed, we need to replace the innerHTML
-    if (ttCtx.isXAxisTooltipEnabled) {
+    if (ttCtx.xaxisTooltipText && ttCtx.isXAxisTooltipEnabled) {
       ttCtx.xaxisTooltipText.innerHTML = xAxisTTVal !== '' ? xAxisTTVal : xVal
     }
 
