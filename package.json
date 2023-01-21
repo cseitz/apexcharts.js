@@ -1,10 +1,10 @@
 {
-  "name": "apexcharts",
+  "name": "@cseitz/apexcharts",
   "version": "3.36.3",
   "description": "A JavaScript Chart Library",
   "repository": {
     "type": "git",
-    "url": "https://github.com/apexcharts/apexcharts.js.git"
+    "url": "https://github.com/cseitz/apexcharts.js.git"
   },
   "main": "dist/apexcharts.common.js",
   "unpkg": "dist/apexcharts.js",
