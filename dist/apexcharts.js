@@ -1,6 +1,6 @@
 /*!
- * ApexCharts v3.36.2
- * (c) 2018-2022 ApexCharts
+ * ApexCharts v3.36.3
+ * (c) 2018-2023 ApexCharts
  * Released under the MIT License.
  */
 (function (global, factory) {
@@ -4846,6 +4846,191 @@
   }();
 
   /**
+   * ApexCharts Formatter Class for setting value formatters for axes as well as tooltips.
+   *
+   * @module Formatters
+   **/
+
+  var Formatters = /*#__PURE__*/function () {
+    function Formatters(ctx) {
+      _classCallCheck(this, Formatters);
+
+      this.ctx = ctx;
+      this.w = ctx.w;
+      this.tooltipKeyFormat = 'dd MMM';
+    }
+
+    _createClass(Formatters, [{
+      key: "xLabelFormat",
+      value: function xLabelFormat(fn, val, timestamp, opts) {
+        var w = this.w;
+
+        if (w.config.xaxis.type === 'datetime') {
+          if (w.config.xaxis.labels.formatter === undefined) {
+            // if user has not specified a custom formatter, use the default tooltip.x.format
+            if (w.config.tooltip.x.formatter === undefined) {
+              var datetimeObj = new DateTime(this.ctx);
+              return datetimeObj.formatDate(datetimeObj.getDate(val), w.config.tooltip.x.format);
+            }
+          }
+        }
+
+        return fn(val, timestamp, opts);
+      }
+    }, {
+      key: "defaultGeneralFormatter",
+      value: function defaultGeneralFormatter(val) {
+        if (Array.isArray(val)) {
+          return val.map(function (v) {
+            return v;
+          });
+        } else {
+          return val;
+        }
+      }
+    }, {
+      key: "defaultYFormatter",
+      value: function defaultYFormatter(v, yaxe, i) {
+        var w = this.w;
+
+        if (Utils$1.isNumber(v)) {
+          if (w.globals.yValueDecimal !== 0) {
+            v = v.toFixed(yaxe.decimalsInFloat !== undefined ? yaxe.decimalsInFloat : w.globals.yValueDecimal);
+          } else if (w.globals.maxYArr[i] - w.globals.minYArr[i] < 5) {
+            v = v.toFixed(1);
+          } else {
+            v = v.toFixed(0);
+          }
+        }
+
+        return v;
+      }
+    }, {
+      key: "setLabelFormatters",
+      value: function setLabelFormatters() {
+        var _this = this;
+
+        var w = this.w;
+
+        w.globals.xaxisTooltipFormatter = function (val) {
+          return _this.defaultGeneralFormatter(val);
+        };
+
+        w.globals.ttKeyFormatter = function (val) {
+          return _this.defaultGeneralFormatter(val);
+        };
+
+        w.globals.ttZFormatter = function (val) {
+          return val;
+        };
+
+        w.globals.legendFormatter = function (val) {
+          return _this.defaultGeneralFormatter(val);
+        }; // formatter function will always overwrite format property
+
+
+        if (w.config.xaxis.labels.formatter !== undefined) {
+          w.globals.xLabelFormatter = w.config.xaxis.labels.formatter;
+        } else {
+          w.globals.xLabelFormatter = function (val) {
+            if (Utils$1.isNumber(val)) {
+              if (!w.config.xaxis.convertedCatToNumeric && w.config.xaxis.type === 'numeric') {
+                if (Utils$1.isNumber(w.config.xaxis.decimalsInFloat)) {
+                  return val.toFixed(w.config.xaxis.decimalsInFloat);
+                } else {
+                  var diff = w.globals.maxX - w.globals.minX;
+
+                  if (diff > 0 && diff < 100) {
+                    return val.toFixed(1);
+                  }
+
+                  return val.toFixed(0);
+                }
+              }
+
+              if (w.globals.isBarHorizontal) {
+                var range = w.globals.maxY - w.globals.minYArr;
+
+                if (range < 4) {
+                  return val.toFixed(1);
+                }
+              }
+
+              return val.toFixed(0);
+            }
+
+            return val;
+          };
+        }
+
+        if (typeof w.config.tooltip.x.formatter === 'function') {
+          w.globals.ttKeyFormatter = w.config.tooltip.x.formatter;
+        } else {
+          w.globals.ttKeyFormatter = w.globals.xLabelFormatter;
+        }
+
+        if (typeof w.config.xaxis.tooltip.formatter === 'function') {
+          w.globals.xaxisTooltipFormatter = w.config.xaxis.tooltip.formatter;
+        }
+
+        if (Array.isArray(w.config.tooltip.y)) {
+          w.globals.ttVal = w.config.tooltip.y;
+        } else {
+          if (w.config.tooltip.y.formatter !== undefined) {
+            w.globals.ttVal = w.config.tooltip.y;
+          }
+        }
+
+        if (w.config.tooltip.z.formatter !== undefined) {
+          w.globals.ttZFormatter = w.config.tooltip.z.formatter;
+        } // legend formatter - if user wants to append any global values of series to legend text
+
+
+        if (w.config.legend.formatter !== undefined) {
+          w.globals.legendFormatter = w.config.legend.formatter;
+        } // formatter function will always overwrite format property
+
+
+        w.config.yaxis.forEach(function (yaxe, i) {
+          if (yaxe.labels.formatter !== undefined) {
+            w.globals.yLabelFormatters[i] = yaxe.labels.formatter;
+          } else {
+            w.globals.yLabelFormatters[i] = function (val) {
+              if (!w.globals.xyCharts) return val;
+
+              if (Array.isArray(val)) {
+                return val.map(function (v) {
+                  return _this.defaultYFormatter(v, yaxe, i);
+                });
+              } else {
+                return _this.defaultYFormatter(val, yaxe, i);
+              }
+            };
+          }
+        });
+        return w.globals;
+      }
+    }, {
+      key: "heatmapLabelFormatters",
+      value: function heatmapLabelFormatters() {
+        var w = this.w;
+
+        if (w.config.chart.type === 'heatmap') {
+          w.globals.yAxisScale[0].result = w.globals.seriesNames.slice(); //  get the longest string from the labels array and also apply label formatter to it
+
+          var longest = w.globals.seriesNames.reduce(function (a, b) {
+            return a.length > b.length ? a : b;
+          }, 0);
+          w.globals.yAxisScale[0].niceMax = longest;
+          w.globals.yAxisScale[0].niceMin = longest;
+        }
+      }
+    }]);
+
+    return Formatters;
+  }();
+
+  /**
    * ApexCharts Default Class for setting default options for all chart types.
    *
    * @module Defaults
@@ -4854,7 +5039,8 @@
   var getRangeValues = function getRangeValues(_ref) {
     var _w$config$series$seri;
 
-    var ctx = _ref.ctx,
+    var isTimeline = _ref.isTimeline,
+        ctx = _ref.ctx,
         seriesIndex = _ref.seriesIndex,
         dataPointIndex = _ref.dataPointIndex,
         y1 = _ref.y1,
@@ -4864,7 +5050,7 @@
     var end = w.globals.seriesRangeEnd[seriesIndex][dataPointIndex];
     var ylabel = w.globals.labels[dataPointIndex];
     var seriesName = w.config.series[seriesIndex].name ? w.config.series[seriesIndex].name : '';
-    var yLbFormatter = w.config.tooltip.y.formatter;
+    var yLbFormatter = w.globals.ttKeyFormatter;
     var yLbTitleFormatter = w.config.tooltip.y.title.formatter;
     var opts = {
       w: w,
@@ -4879,7 +5065,18 @@
     }
 
     if ((_w$config$series$seri = w.config.series[seriesIndex].data[dataPointIndex]) !== null && _w$config$series$seri !== void 0 && _w$config$series$seri.x) {
-      ylabel = w.config.series[seriesIndex].data[dataPointIndex].x + ':';
+      ylabel = w.config.series[seriesIndex].data[dataPointIndex].x;
+    }
+
+    if (!isTimeline) {
+      if (w.config.xaxis.type === 'datetime') {
+        var xFormat = new Formatters(ctx);
+        ylabel = xFormat.xLabelFormat(w.globals.ttKeyFormatter, ylabel, ylabel, {
+          i: undefined,
+          dateFormatter: new DateTime(ctx).formatDate,
+          w: w
+        });
+      }
     }
 
     if (typeof yLbFormatter === 'function') {
@@ -4945,7 +5142,7 @@
       valueHTML = rangeValues;
     }
 
-    return '<div class="apexcharts-tooltip-rangebar">' + '<div> <span class="series-name" style="color: ' + color + '">' + (seriesName ? seriesName : '') + '</span></div>' + '<div> <span class="category">' + ylabel + ' </span> ' + valueHTML + ' </div>' + '</div>';
+    return '<div class="apexcharts-tooltip-rangebar">' + '<div> <span class="series-name" style="color: ' + color + '">' + (seriesName ? seriesName : '') + '</span></div>' + '<div> <span class="category">' + ylabel + ': </span> ' + valueHTML + ' </div>' + '</div>';
   };
 
   var Defaults = /*#__PURE__*/function () {
@@ -5181,7 +5378,9 @@
       key: "rangeBar",
       value: function rangeBar() {
         var handleTimelineTooltip = function handleTimelineTooltip(opts) {
-          var _getRangeValues = getRangeValues(opts),
+          var _getRangeValues = getRangeValues(_objectSpread2(_objectSpread2({}, opts), {}, {
+            isTimeline: true
+          })),
               color = _getRangeValues.color,
               seriesName = _getRangeValues.seriesName,
               ylabel = _getRangeValues.ylabel,
@@ -5864,19 +6063,6 @@
         var options = new Options();
         var defaults = new Defaults(opts);
         this.chartType = opts.chart.type;
-
-        if (this.chartType === 'histogram') {
-          // technically, a histogram can be drawn by a column chart with no spaces in between
-          opts.chart.type = 'bar';
-          opts = Utils$1.extend({
-            plotOptions: {
-              bar: {
-                columnWidth: '99.99%'
-              }
-            }
-          }, opts);
-        }
-
         opts = this.extendYAxis(opts);
         opts = this.extendAnnotations(opts);
         var config = options.init();
@@ -5884,7 +6070,7 @@
 
         if (opts && _typeof(opts) === 'object') {
           var chartDefaults = {};
-          var chartTypes = ['line', 'area', 'bar', 'candlestick', 'boxPlot', 'rangeBar', 'rangeArea', 'histogram', 'bubble', 'scatter', 'heatmap', 'treemap', 'pie', 'polarArea', 'donut', 'radar', 'radialBar'];
+          var chartTypes = ['line', 'area', 'bar', 'candlestick', 'boxPlot', 'rangeBar', 'rangeArea', 'bubble', 'scatter', 'heatmap', 'treemap', 'pie', 'polarArea', 'donut', 'radar', 'radialBar'];
 
           if (chartTypes.indexOf(opts.chart.type) !== -1) {
             chartDefaults = defaults[opts.chart.type]();
@@ -8620,191 +8806,6 @@
     return Data;
   }();
 
-  /**
-   * ApexCharts Formatter Class for setting value formatters for axes as well as tooltips.
-   *
-   * @module Formatters
-   **/
-
-  var Formatters = /*#__PURE__*/function () {
-    function Formatters(ctx) {
-      _classCallCheck(this, Formatters);
-
-      this.ctx = ctx;
-      this.w = ctx.w;
-      this.tooltipKeyFormat = 'dd MMM';
-    }
-
-    _createClass(Formatters, [{
-      key: "xLabelFormat",
-      value: function xLabelFormat(fn, val, timestamp, opts) {
-        var w = this.w;
-
-        if (w.config.xaxis.type === 'datetime') {
-          if (w.config.xaxis.labels.formatter === undefined) {
-            // if user has not specified a custom formatter, use the default tooltip.x.format
-            if (w.config.tooltip.x.formatter === undefined) {
-              var datetimeObj = new DateTime(this.ctx);
-              return datetimeObj.formatDate(datetimeObj.getDate(val), w.config.tooltip.x.format);
-            }
-          }
-        }
-
-        return fn(val, timestamp, opts);
-      }
-    }, {
-      key: "defaultGeneralFormatter",
-      value: function defaultGeneralFormatter(val) {
-        if (Array.isArray(val)) {
-          return val.map(function (v) {
-            return v;
-          });
-        } else {
-          return val;
-        }
-      }
-    }, {
-      key: "defaultYFormatter",
-      value: function defaultYFormatter(v, yaxe, i) {
-        var w = this.w;
-
-        if (Utils$1.isNumber(v)) {
-          if (w.globals.yValueDecimal !== 0) {
-            v = v.toFixed(yaxe.decimalsInFloat !== undefined ? yaxe.decimalsInFloat : w.globals.yValueDecimal);
-          } else if (w.globals.maxYArr[i] - w.globals.minYArr[i] < 5) {
-            v = v.toFixed(1);
-          } else {
-            v = v.toFixed(0);
-          }
-        }
-
-        return v;
-      }
-    }, {
-      key: "setLabelFormatters",
-      value: function setLabelFormatters() {
-        var _this = this;
-
-        var w = this.w;
-
-        w.globals.xaxisTooltipFormatter = function (val) {
-          return _this.defaultGeneralFormatter(val);
-        };
-
-        w.globals.ttKeyFormatter = function (val) {
-          return _this.defaultGeneralFormatter(val);
-        };
-
-        w.globals.ttZFormatter = function (val) {
-          return val;
-        };
-
-        w.globals.legendFormatter = function (val) {
-          return _this.defaultGeneralFormatter(val);
-        }; // formatter function will always overwrite format property
-
-
-        if (w.config.xaxis.labels.formatter !== undefined) {
-          w.globals.xLabelFormatter = w.config.xaxis.labels.formatter;
-        } else {
-          w.globals.xLabelFormatter = function (val) {
-            if (Utils$1.isNumber(val)) {
-              if (!w.config.xaxis.convertedCatToNumeric && w.config.xaxis.type === 'numeric') {
-                if (Utils$1.isNumber(w.config.xaxis.decimalsInFloat)) {
-                  return val.toFixed(w.config.xaxis.decimalsInFloat);
-                } else {
-                  var diff = w.globals.maxX - w.globals.minX;
-
-                  if (diff > 0 && diff < 100) {
-                    return val.toFixed(1);
-                  }
-
-                  return val.toFixed(0);
-                }
-              }
-
-              if (w.globals.isBarHorizontal) {
-                var range = w.globals.maxY - w.globals.minYArr;
-
-                if (range < 4) {
-                  return val.toFixed(1);
-                }
-              }
-
-              return val.toFixed(0);
-            }
-
-            return val;
-          };
-        }
-
-        if (typeof w.config.tooltip.x.formatter === 'function') {
-          w.globals.ttKeyFormatter = w.config.tooltip.x.formatter;
-        } else {
-          w.globals.ttKeyFormatter = w.globals.xLabelFormatter;
-        }
-
-        if (typeof w.config.xaxis.tooltip.formatter === 'function') {
-          w.globals.xaxisTooltipFormatter = w.config.xaxis.tooltip.formatter;
-        }
-
-        if (Array.isArray(w.config.tooltip.y)) {
-          w.globals.ttVal = w.config.tooltip.y;
-        } else {
-          if (w.config.tooltip.y.formatter !== undefined) {
-            w.globals.ttVal = w.config.tooltip.y;
-          }
-        }
-
-        if (w.config.tooltip.z.formatter !== undefined) {
-          w.globals.ttZFormatter = w.config.tooltip.z.formatter;
-        } // legend formatter - if user wants to append any global values of series to legend text
-
-
-        if (w.config.legend.formatter !== undefined) {
-          w.globals.legendFormatter = w.config.legend.formatter;
-        } // formatter function will always overwrite format property
-
-
-        w.config.yaxis.forEach(function (yaxe, i) {
-          if (yaxe.labels.formatter !== undefined) {
-            w.globals.yLabelFormatters[i] = yaxe.labels.formatter;
-          } else {
-            w.globals.yLabelFormatters[i] = function (val) {
-              if (!w.globals.xyCharts) return val;
-
-              if (Array.isArray(val)) {
-                return val.map(function (v) {
-                  return _this.defaultYFormatter(v, yaxe, i);
-                });
-              } else {
-                return _this.defaultYFormatter(val, yaxe, i);
-              }
-            };
-          }
-        });
-        return w.globals;
-      }
-    }, {
-      key: "heatmapLabelFormatters",
-      value: function heatmapLabelFormatters() {
-        var w = this.w;
-
-        if (w.config.chart.type === 'heatmap') {
-          w.globals.yAxisScale[0].result = w.globals.seriesNames.slice(); //  get the longest string from the labels array and also apply label formatter to it
-
-          var longest = w.globals.seriesNames.reduce(function (a, b) {
-            return a.length > b.length ? a : b;
-          }, 0);
-          w.globals.yAxisScale[0].niceMax = longest;
-          w.globals.yAxisScale[0].niceMin = longest;
-        }
-      }
-    }]);
-
-    return Formatters;
-  }();
-
   var AxesUtils = /*#__PURE__*/function () {
     function AxesUtils(ctx) {
       _classCallCheck(this, AxesUtils);
@@ -9498,7 +9499,7 @@
           });
           var elXAxisTitleText = graphics.drawText({
             x: w.globals.gridWidth / 2 + w.config.xaxis.title.offsetX,
-            y: this.offY + parseFloat(this.xaxisFontSize) + (w.config.xaxis.title.position === 'bottom' ? w.globals.xAxisLabelsHeight : -w.globals.xAxisLabelsHeight - 10) + w.config.xaxis.title.offsetY,
+            y: this.offY + parseFloat(this.xaxisFontSize) + (w.config.xaxis.position === 'bottom' ? w.globals.xAxisLabelsHeight : -w.globals.xAxisLabelsHeight - 10) + w.config.xaxis.title.offsetY,
             text: w.config.xaxis.title.text,
             textAnchor: 'middle',
             fontSize: w.config.xaxis.title.style.fontSize,
@@ -9700,11 +9701,28 @@
               multiY = label.length / 2 * parseInt(ylabels.style.fontSize, 10);
             }
 
+            var offsetX = ylabels.offsetX - 15;
+            var textAnchor = 'end';
+
+            if (_this2.yaxis.opposite) {
+              textAnchor = 'start';
+            }
+
+            if (w.config.yaxis[0].labels.align === 'left') {
+              offsetX = ylabels.offsetX;
+              textAnchor = 'start';
+            } else if (w.config.yaxis[0].labels.align === 'center') {
+              offsetX = ylabels.offsetX;
+              textAnchor = 'middle';
+            } else if (w.config.yaxis[0].labels.align === 'right') {
+              textAnchor = 'end';
+            }
+
             var elLabel = graphics.drawText({
-              x: ylabels.offsetX - 15,
+              x: offsetX,
               y: yPos + colHeight + ylabels.offsetY - multiY,
               text: label,
-              textAnchor: _this2.yaxis.opposite ? 'start' : 'end',
+              textAnchor: textAnchor,
               foreColor: getForeColor(),
               fontSize: ylabels.style.fontSize,
               fontFamily: ylabels.style.fontFamily,
@@ -11616,6 +11634,20 @@
               xPad = xPad * -1;
             }
 
+            var textAnchor = 'end';
+
+            if (w.config.yaxis[realIndex].opposite) {
+              textAnchor = 'start';
+            }
+
+            if (w.config.yaxis[realIndex].labels.align === 'left') {
+              textAnchor = 'start';
+            } else if (w.config.yaxis[realIndex].labels.align === 'center') {
+              textAnchor = 'middle';
+            } else if (w.config.yaxis[realIndex].labels.align === 'right') {
+              textAnchor = 'end';
+            }
+
             var yColors = _this.axesUtils.getYAxisForeColor(yaxisStyle.colors, realIndex);
 
             var getForeColor = function getForeColor() {
@@ -11626,7 +11658,7 @@
               x: xPad,
               y: l + tickAmount / 10 + w.config.yaxis[realIndex].labels.offsetY + 1,
               text: val,
-              textAnchor: w.config.yaxis[realIndex].opposite ? 'start' : 'end',
+              textAnchor: textAnchor,
               fontSize: yaxisFontSize,
               fontFamily: yaxisFontFamily,
               fontWeight: yaxisFontWeight,
@@ -11950,7 +11982,7 @@
         yaxis.forEach(function (y, index) {
           var yaxe = w.config.yaxis[index]; // proceed only if user has specified alignment
 
-          if (yaxe && yaxe.labels.align !== undefined) {
+          if (yaxe && !yaxe.floating && yaxe.labels.align !== undefined) {
             var yAxisInner = w.globals.dom.baseEl.querySelector(".apexcharts-yaxis[rel='".concat(index, "'] .apexcharts-yaxis-texts-g"));
             var yAxisTexts = w.globals.dom.baseEl.querySelectorAll(".apexcharts-yaxis[rel='".concat(index, "'] .apexcharts-yaxis-label"));
             yAxisTexts = Utils$1.listToArray(yAxisTexts);
@@ -16069,7 +16101,7 @@
         } // if xaxis tooltip is constructed, we need to replace the innerHTML
 
 
-        if (ttCtx.isXAxisTooltipEnabled) {
+        if (ttCtx.xaxisTooltipText && ttCtx.isXAxisTooltipEnabled) {
           ttCtx.xaxisTooltipText.innerHTML = xAxisTTVal !== '' ? xAxisTTVal : xVal;
         }
 
@@ -18016,7 +18048,7 @@
           this.ycrosshairs.classList.remove('apexcharts-active');
         }
 
-        if (this.isXAxisTooltipEnabled) {
+        if (this.xaxisTooltip && this.isXAxisTooltipEnabled) {
           this.xaxisTooltip.classList.remove('apexcharts-active');
         }
 
@@ -24922,7 +24954,7 @@
 
           var year = this._getYear(currentYear, month, yrCounter);
 
-          pos = hour === 0 && i === 0 ? remainingMins * minutesWidthOnXAxis : 60 * minutesWidthOnXAxis + pos;
+          pos = 60 * minutesWidthOnXAxis + pos;
           var val = hour === 0 ? date : hour;
           this.timeScaleArray.push({
             position: pos,
@@ -32103,11 +32135,6 @@
 
           me.grid = new Grid(me);
           var elgrid = me.grid.drawGrid();
-
-          if (w.config.chart.type !== 'treemap') {
-            me.axes.drawAxis(w.config.chart.type, elgrid);
-          }
-
           me.annotations = new Annotations(me);
           me.annotations.drawImageAnnos();
           me.annotations.drawTextAnnos();
@@ -32161,6 +32188,10 @@
           if (w.config.annotations.position === 'front') {
             w.globals.dom.Paper.add(w.globals.dom.elAnnotations);
             me.annotations.drawAxesAnnotations();
+          }
+
+          if (w.config.chart.type !== 'treemap') {
+            me.axes.drawAxis(w.config.chart.type, elgrid);
           }
 
           if (!w.globals.noData) {
