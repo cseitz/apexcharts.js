@@ -740,7 +740,7 @@ export default class Tooltip {
     if (this.ycrosshairs !== null) {
       this.ycrosshairs.classList.remove('apexcharts-active')
     }
-    if (this.isXAxisTooltipEnabled) {
+    if (this.xaxisTooltip && this.isXAxisTooltipEnabled) {
       this.xaxisTooltip.classList.remove('apexcharts-active')
     }
     if (this.yaxisTooltips.length) {
